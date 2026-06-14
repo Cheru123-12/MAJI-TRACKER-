@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Performance Tracker – Maji Mazuri Flowers</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1a14;--surface:#162010;--card:#1c2a1a;--border:#2a3d28;
+  --accent:#4caf72;--accent-dim:#2d6645;--accent-glow:rgba(76,175,114,0.12);
+  --warn:#e07b3a;--danger:#e05252;--danger-dim:#7a1f1f;
+  --blue:#4a9fd4;--text:#d4e8d0;--text-dim:#7a9e80;--text-muted:#4a6650;
+  --input-bg:#111c10;--font:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+header h1{font-size:15px;font-weight:700;line-height:1.2}
+header p{font-size:11px;color:var(--text-dim);margin-top:1px}
+.header-right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stat-pill{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-dim)}
+.stat-pill span{color:var(--accent);font-weight:700}
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);padding:0 8px;overflow-x:auto}
+.tab{padding:11px 12px;font-size:12px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;transition:all .2s;font-weight:500;white-space:nowrap}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text-dim)}
+.content{padding:20px 16px;max-width:960px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.form-card h2{font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-card h2::before{content:'';display:block;width:3px;height:16px;background:var(--accent);border-radius:2px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:600px){.form-grid,.form-grid.cols-3{grid-template-columns:1fr}}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.field label .req{color:var(--warn);margin-left:3px}
+.field input,.field select,.field textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:var(--font);padding:9px 12px;outline:none;transition:border-color .2s}
+.field textarea{resize:vertical;min-height:80px}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--accent-glow)}
+.field select option{background:#1c2a1a}
+.position-toggle{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.pos-btn{flex:1;padding:9px 10px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;background:var(--input-bg);color:var(--text-muted);border:none;transition:all .2s;border-right:1px solid var(--border)}
+.pos-btn:last-child{border-right:none}
+.pos-btn.active.gw{background:#1e3a2e;color:var(--accent)}
+.pos-btn.active.atl{background:#2a2010;color:var(--warn)}
+.severity-row,.status-row{display:flex;gap:8px;flex-wrap:wrap}
+.sev-btn,.stat-tog{flex:1;min-width:70px;padding:9px 8px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;transition:all .2s}
+.sev-btn.active.low{background:#1a2e1c;color:#6fc87a;border-color:#4a8a54}
+.sev-btn.active.med{background:#2e2510;color:#e0b84a;border-color:#a07a28}
+.sev-btn.active.high{background:#2e1a10;color:var(--warn);border-color:#a05020}
+.sev-btn.active.crit{background:var(--danger-dim);color:#f07070;border-color:#a03030}
+.stat-tog.active.open{background:#2e1a10;color:#f07070;border-color:#a03030}
+.stat-tog.active.progress{background:#2e2510;color:#e0b84a;border-color:#a07a28}
+.stat-tog.active.resolved{background:#1a2e1c;color:#6fc87a;border-color:#4a8a54}
+.photo-area{border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative}
+.photo-area:hover{border-color:var(--accent-dim)}
+.photo-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.rm-photo{position:relative;display:inline-block}
+.rm-photo img{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.rm-photo button{position:absolute;top:-4px;right:-4px;background:var(--danger);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center}
+.btn-submit{width:100%;padding:12px;background:var(--accent);color:#0a1a0e;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.btn-submit:hover{opacity:.88}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--accent);color:#0a1a0e;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:700;opacity:0;transition:all .35s;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.offender-banner{background:var(--danger-dim);border:1px solid #a03030;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#f07070;display:flex;align-items:center;gap:10px}
+.records-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.records-toolbar input,.records-toolbar select{background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;padding:8px 12px;font-family:var(--font);outline:none}
+.records-toolbar input{flex:1;min-width:160px}
+.records-toolbar select{min-width:120px}
+.records-count{font-size:12px;color:var(--text-muted);margin-bottom:12px}
+.rec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:border-color .2s;position:relative}
+.rec-card:hover{border-color:var(--accent-dim)}
+.rec-card.repeat{border-left:3px solid var(--danger)}
+.rec-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.rec-name{font-size:14px;font-weight:700;color:var(--text)}
+.rec-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.rec-meta span{color:var(--text-dim)}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:flex-start}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.badge.gw{background:#1e3a2e;color:var(--accent)}
+.badge.atl{background:#2a2010;color:var(--warn)}
+.badge.low{background:#1a2e1c;color:#6fc87a}
+.badge.med{background:#2e2510;color:#e0b84a}
+.badge.high{background:#2e1a10;color:var(--warn)}
+.badge.crit{background:var(--danger-dim);color:#f07070}
+.badge.open{background:var(--danger-dim);color:#f07070}
+.badge.progress{background:#2e2510;color:#e0b84a}
+.badge.resolved{background:#1a2e1c;color:#6fc87a}
+.badge.repeat-flag{background:#4a0a0a;color:#ff9090;border:1px solid #a03030}
+.rec-issue{font-size:13px;color:var(--text-dim);line-height:1.5;border-left:2px solid var(--border);padding-left:10px;margin-bottom:8px}
+.rec-cat-row{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--text-muted);flex-wrap:wrap}
+.cat-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text-dim);font-size:11px}
+.rec-action{font-size:12px;color:#e0b84a;margin-top:6px}
+.rec-action span{color:var(--text-muted);font-size:11px}
+.rec-photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rec-photos img{width:60px;height:60px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer}
+.rec-delete{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;border-radius:4px;transition:color .2s}
+.rec-delete:hover{color:var(--danger)}
+.status-inline{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.si-btn{padding:4px 10px;font-size:10px;font-weight:700;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:var(--input-bg);color:var(--text-muted);transition:all .2s;text-transform:uppercase}
+.si-btn.open.active{background:#4a0a0a;color:#f07070;border-color:#a03030}
+.si-btn.progress.active{background:#2e2510;color:#e0b84a;border-color:#a07a28}
+.si-btn.resolved.active{background:#1a2e1c;color:#6fc87a;border-color:#4a8a54}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px}
+.empty-state div{font-size:36px;margin-bottom:12px}
+.summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:500px){.summary-grid{grid-template-columns:1fr}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.sum-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.sum-card .value{font-size:28px;font-weight:800;color:var(--accent)}
+.sum-card .sub{font-size:12px;color:var(--text-dim);margin-top:4px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--surface);color:var(--text-muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-dim)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface)}
+td.name-cell{color:var(--text);font-weight:600}
+td.count-cell{color:var(--warn);font-weight:700;font-size:15px}
+.section-title{font-size:13px;font-weight:700;color:var(--text-dim);margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em}
+.export-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.exp-btn{padding:10px 18px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--card);color:var(--text-dim);transition:all .2s;display:flex;align-items:center;gap:6px}
+.exp-btn:hover{border-color:var(--accent-dim);color:var(--accent)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto}
+.modal-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1}
+.modal-head h3{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer}
+.modal-body{padding:20px}
+.letter-box{background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:13px;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;font-family:Georgia,serif;margin-bottom:14px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn-sm{padding:8px 16px;font-size:13px;font-weight:600;border-radius:7px;border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text-dim);transition:all .2s}
+.btn-sm:hover{border-color:var(--accent-dim);color:var(--accent)}
+.btn-sm.primary{background:var(--accent);color:#0a1a0e;border-color:var(--accent)}
+.btn-sm.primary:hover{opacity:.88}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:300;display:flex;align-items:center;justify-content:center}
+.lightbox img{max-width:95vw;max-height:90vh;border-radius:8px}
+.lightbox-close{position:fixed;top:20px;right:24px;color:#fff;font-size:28px;cursor:pointer;background:none;border:none}
+/* CHART PAGE */
+.chart-controls{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.chart-controls select{background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;padding:8px 12px;font-family:var(--font);outline:none;min-width:140px}
+.chart-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.chart-box h3{font-size:13px;font-weight:700;color:var(--text-dim);margin-bottom:16px;text-transform:uppercase;letter-spacing:.06em}
+.chart-wrap{position:relative;height:260px}
+/* REPORT PAGE */
+.report-controls{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end}
+.report-controls select{background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;padding:8px 12px;font-family:var(--font);outline:none}
+#reportContent{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px}
+.report-header{border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:20px}
+.report-header h2{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
+.report-header p{font-size:12px;color:var(--text-muted)}
+.report-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:500px){.report-stat-row{grid-template-columns:repeat(2,1fr)}}
+.r-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.r-stat .rv{font-size:22px;font-weight:800;color:var(--accent)}
+.r-stat .rl{font-size:10px;color:var(--text-muted);margin-top:2px;text-transform:uppercase}
+.report-section{margin-bottom:20px}
+.report-section h4{font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+/* DISCIPLINARY */
+.disc-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.disc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.disc-pipeline{display:flex;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.disc-stage{flex:1;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;background:var(--input-bg);color:var(--text-muted);cursor:pointer;transition:all .2s;border-right:1px solid var(--border);line-height:1.3}
+.disc-stage:last-child{border-right:none}
+.disc-stage.active.verbal{background:#1e2a3a;color:#4a9fd4}
+.disc-stage.active.first{background:#2e2510;color:#e0b84a}
+.disc-stage.active.second{background:#2e1a10;color:var(--warn)}
+.disc-stage.active.final{background:var(--danger-dim);color:#f07070}
+.disc-stage.active.term{background:#3a0a0a;color:#ff6060}
+.disc-meta{font-size:11px;color:var(--text-muted);display:flex;gap:14px;flex-wrap:wrap}
+.disc-meta span{color:var(--text-dim)}
+.disc-note-row{display:flex;gap:8px;margin-top:10px}
+.disc-note-row input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 10px;outline:none;font-family:var(--font)}
+.disc-note-row button{padding:6px 14px;font-size:12px;font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-dim);border-radius:6px;cursor:pointer}
+/* SUPERVISOR */
+.sup-selector{margin-bottom:20px}
+.sup-selector select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-weight:600;padding:11px 14px;font-family:var(--font);outline:none}
+.sup-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:500px){.sup-stats{grid-template-columns:1fr}}
+.sup-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.sup-stat .sv{font-size:24px;font-weight:800;color:var(--accent)}
+.sup-stat .sl{font-size:11px;color:var(--text-muted);margin-top:4px}
+.sup-team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+@media(max-width:500px){.sup-team-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-icon">&#127801;</div>
+  <div><h1>Staff Performance Tracker</h1><p>Maji Mazuri Flowers Limited</p></div>
+  <div class="header-right">
+    <div class="stat-pill">Total: <span id="totalCount">0</span></div>
+    <div class="stat-pill">&#128680; Repeat: <span id="repeatCount" style="color:var(--danger)">0</span></div>
+    <div class="stat-pill">Open: <span id="openCount" style="color:var(--warn)">0</span></div>
+  </div>
+</header>
+<div class="tabs">
+  <div class="tab active"  onclick="showTab('log')">&#128203; Log Issue</div>
+  <div class="tab" onclick="showTab('records')">&#128194; Records</div>
+  <div class="tab" onclick="showTab('summary')">&#128202; Summary</div>
+  <div class="tab" onclick="showTab('trends')">&#128200; Trends</div>
+  <div class="tab" onclick="showTab('report')">&#128196; Report</div>
+  <div class="tab" onclick="showTab('disc')">&#9878;&#65039; Disciplinary</div>
+  <div class="tab" onclick="showTab('supv')">&#128100; Supervisor</div>
+  <div class="tab" onclick="showTab('export')">&#128228; Export</div>
+</div>
+<div class="content">
+<!-- LOG -->
+<div class="page active" id="page-log">
+  <div class="offender-banner" id="repeatBanner" style="display:none"></div>
+  <div class="form-card">
+    <h2>Staff Information</h2>
+    <div class="form-grid cols-3">
+      <div class="field" style="grid-column:span 2"><label>Employee Name <span class="req">*</span></label><input type="text" id="empName" placeholder="e.g. John Kamau" oninput="checkRepeat()"></div>
+      <div class="field"><label>Employee ID</label><input type="text" id="empId" placeholder="MMF-042"></div>
+    </div>
+    <div class="form-grid" style="margin-top:14px">
+      <div class="field"><label>Position <span class="req">*</span></label>
+        <div class="position-toggle">
+          <button class="pos-btn gw active" onclick="setPos('GW',this)">&#128119; General Worker</button>
+          <button class="pos-btn atl" onclick="setPos('ATL',this)">&#127894; Asst. Team Leader</button>
+        </div>
+      </div>
+      <div class="field"><label>Supervisor / Team Leader</label><input type="text" id="supervisor" placeholder="e.g. Mary Wanjiku"></div>
+    </div>
+  </div>
+  <div class="form-card">
+    <h2>Incident Details</h2>
+    <div class="form-grid cols-3">
+      <div class="field"><label>Date <span class="req">*</span></label><input type="date" id="incDate"></div>
+      <div class="field"><label>Greenhouse <span class="req">*</span></label><select id="greenhouse"><option value="">-- Select GH --</option></select></div>
+      <div class="field"><label>Category</label>
+        <select id="category"><option value="">-- Select --</option><option>Grading Quality</option><option>Harvesting</option><option>Irrigation</option><option>Spraying / IPM</option><option>Packing</option><option>Plant Care</option><option>Attendance / Punctuality</option><option>Safety / PPE</option><option>Insubordination</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px"><label>Severity <span class="req">*</span></label>
+      <div class="severity-row">
+        <button class="sev-btn low" onclick="setSev('Low',this)">&#9989; Low</button>
+        <button class="sev-btn med" onclick="setSev('Medium',this)">&#9888;&#65039; Medium</button>
+        <button class="sev-btn high" onclick="setSev('High',this)">&#128308; High</button>
+        <button class="sev-btn crit" onclick="setSev('Critical',this)">&#128680; Critical</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px"><label>Issue / Mistake Description <span class="req">*</span></label><textarea id="issueDesc" placeholder="Describe the issue in detail..."></textarea></div>
+    <div class="field" style="margin-top:14px"><label>Corrective Action Taken</label><textarea id="corrective" placeholder="Verbal warning, retraining, written warning..." style="min-height:60px"></textarea></div>
+    <div class="field" style="margin-top:14px"><label>Status</label>
+      <div class="status-row">
+        <button class="stat-tog open active" onclick="setStatus('Open',this)">&#128308; Open</button>
+        <button class="stat-tog progress" onclick="setStatus('In Progress',this)">&#127937; In Progress</button>
+        <button class="stat-tog resolved" onclick="setStatus('Resolved',this)">&#9989; Resolved</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px"><label>Photo Evidence</label>
+      <div class="photo-area"><input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(event)">
+        <div style="font-size:24px">&#128247;</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px">Tap to attach photos</div>
+      </div>
+      <div class="photo-preview" id="photoPreview"></div>
+    </div>
+    <div class="field" style="margin-top:14px"><label>Recorded By</label><input type="text" id="recordedBy" placeholder="Your name"></div>
+  </div>
+  <button class="btn-submit" onclick="submitRecord()">&#10004; Save Performance Record</button>
+</div>
+<!-- RECORDS -->
+<div class="page" id="page-records">
+  <div class="records-toolbar">
+    <input type="text" id="searchInput" placeholder="&#128269; Search name, GH, issue..." oninput="renderRecords()">
+    <select id="filterPos" onchange="renderRecords()"><option value="">All Positions</option><option value="GW">General Worker</option><option value="ATL">Asst. TL</option></select>
+    <select id="filterGH" onchange="renderRecords()"><option value="">All GH</option></select>
+    <select id="filterSev" onchange="renderRecords()"><option value="">All Severity</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+    <select id="filterStatus" onchange="renderRecords()"><option value="">All Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
+  </div>
+  <div class="records-count" id="recordsCount"></div>
+  <div id="recordsList"></div>
+</div>
+<!-- SUMMARY -->
+<div class="page" id="page-summary">
+  <div class="summary-grid">
+    <div class="sum-card"><div class="label">Total Issues</div><div class="value" id="s-total">0</div><div class="sub">All greenhouses</div></div>
+    <div class="sum-card"><div class="label">Critical / High</div><div class="value" id="s-high" style="color:var(--danger)">0</div><div class="sub">Urgent follow-up</div></div>
+    <div class="sum-card"><div class="label">Open Issues</div><div class="value" id="s-open" style="color:var(--warn)">0</div><div class="sub">Unresolved</div></div>
+    <div class="sum-card"><div class="label">Repeat Offenders</div><div class="value" id="s-repeat" style="color:var(--warn)">0</div><div class="sub">3+ issues logged</div></div>
+  </div>
+  <div class="section-title">&#128680; Repeat Offenders (3+ Issues)</div>
+  <div class="form-card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Position</th><th>Issues</th><th>Last GH</th></tr></thead><tbody id="repeatTbody"></tbody></table></div></div>
+  <div class="section-title">Issues by Staff Member</div>
+  <div class="form-card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>#</th><th>Employee</th><th>Position</th><th>GH</th><th>Count</th></tr></thead><tbody id="staffTbody"></tbody></table></div></div>
+  <div class="section-title">Issues by Greenhouse</div>
+  <div class="form-card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Greenhouse</th><th>Issues</th></tr></thead><tbody id="ghTbody"></tbody></table></div></div>
+  <div class="section-title">Issues by Category</div>
+  <div class="form-card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody id="catTbody"></tbody></table></div></div>
+</div>
+<!-- TRENDS -->
+<div class="page" id="page-trends">
+  <div class="chart-controls">
+    <select id="trendPeriod" onchange="renderTrends()"><option value="monthly" selected>Monthly (12 months)</option><option value="weekly">Weekly (12 weeks)</option></select>
+    <select id="trendGroup" onchange="renderTrends()"><option value="all">All Issues</option><option value="severity">By Severity</option><option value="category">By Category</option></select>
+  </div>
+  <div class="chart-box"><h3>&#128200; Issue Volume Over Time</h3><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+  <div class="form-grid" style="gap:16px">
+    <div class="chart-box"><h3>&#128308; Severity Breakdown</h3><div class="chart-wrap" style="height:220px"><canvas id="sevChart"></canvas></div></div>
+    <div class="chart-box"><h3>&#127968; Top Greenhouses</h3><div class="chart-wrap" style="height:220px"><canvas id="ghChart"></canvas></div></div>
+  </div>
+  <div class="chart-box"><h3>&#9989; Resolution Status</h3><div class="chart-wrap" style="height:180px"><canvas id="resChart"></canvas></div></div>
+</div>
+<!-- REPORT -->
+<div class="page" id="page-report">
+  <div class="report-controls">
+    <div class="field"><label>Select Month</label><select id="reportMonth" onchange="renderReport()"></select></div>
+    <button class="exp-btn" onclick="window.print()">&#128424;&#65039; Print Report</button>
+    <button class="exp-btn" onclick="exportReportCSV()">&#128202; Export CSV</button>
+  </div>
+  <div id="reportContent"><div class="empty-state"><div>&#128196;</div>Select a month to generate the report</div></div>
+</div>
+<!-- DISCIPLINARY -->
+<div class="page" id="page-disc">
+  <div class="form-card">
+    <h2>Disciplinary Escalation Tracker</h2>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Click a stage to update each employee's disciplinary level. Notes are saved per employee.</p>
+    <div class="field"><label>Search Employee</label><input type="text" id="discSearch" placeholder="Filter by name..." oninput="renderDisc()"></div>
+  </div>
+  <div id="discList"></div>
+</div>
+<!-- SUPERVISOR -->
+<div class="page" id="page-supv">
+  <div class="sup-selector"><select id="supvSelect" onchange="renderSupv()"><option value="">-- Select Supervisor / Team Leader --</option></select></div>
+  <div id="supvContent"><div class="empty-state"><div>&#128100;</div>Select a supervisor to view their team dashboard</div></div>
+</div>
+<!-- EXPORT -->
+<div class="page" id="page-export">
+  <div class="form-card">
+    <h2>Export Data</h2>
+    <div class="export-row">
+      <button class="exp-btn" onclick="exportCSV()">&#128202; Export All to CSV</button>
+      <button class="exp-btn" onclick="window.print()">&#128424;&#65039; Print / PDF</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">CSV opens in Excel. For PDF use Print then Save as PDF.</p>
+    <h2>Generate Warning Letter</h2>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="field"><label>Select Employee</label><select id="letterEmp" onchange="populateLetterIssues()"><option value="">-- Choose --</option></select></div>
+      <div class="field"><label>Select Issue</label><select id="letterIssue"><option value="">-- Choose Issue --</option></select></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Warning Type</label><select id="warnType"><option>First Written Warning</option><option>Second Written Warning</option><option>Final Written Warning</option></select></div>
+      <div class="field"><label>HR / Manager Name</label><input type="text" id="hrName" placeholder="e.g. Vincent Cheruiyot"></div>
+    </div>
+    <button class="btn-submit" style="margin-top:14px" onclick="generateLetter()">&#9993; Generate Warning Letter</button>
+  </div>
+</div>
+</div>
+<!-- LETTER MODAL -->
+<div class="modal-overlay" id="letterModal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><h3>&#9888;&#65039; Warning Letter</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="modal-body"><div class="letter-box" id="letterContent"></div></div>
+    <div class="modal-footer"><button class="btn-sm" onclick="copyLetter()">&#128203; Copy</button><button class="btn-sm primary" onclick="printLetter()">&#128424;&#65039; Print</button></div>
+  </div>
+</div>
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" style="display:none" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&#10005;</button>
+  <img id="lightboxImg" src="">
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var records=JSON.parse(localStorage.getItem('mmfl_perf')||'[]');
+var discData=JSON.parse(localStorage.getItem('mmfl_disc')||'{}');
+var selectedPos='GW',selectedSev='',selectedStatus='Open',pendingPhotos=[];
+var trendC=null,sevC=null,ghC=null,resC=null;
+
+document.getElementById('incDate').value=new Date().toISOString().split('T')[0];
+['greenhouse','filterGH'].forEach(function(id){
+  var sel=document.getElementById(id);
+  if(id==='filterGH'){var o=document.createElement('option');o.value='';o.textContent='All GH';sel.appendChild(o);}
+  for(var i=1;i<=28;i++){var o=document.createElement('option');o.value=o.textContent='GH '+String(i).padStart(2,'0');sel.appendChild(o);}
+});
+populateReportMonths();
+updateHeaderStats();
+
+var TAB_NAMES=['log','records','summary','trends','report','disc','supv','export'];
+function showTab(tab){
+  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',TAB_NAMES[i]===tab);});
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='records')renderRecords();
+  if(tab==='summary')renderSummary();
+  if(tab==='trends')setTimeout(renderTrends,60);
+  if(tab==='report')renderReport();
+  if(tab==='disc'){renderDisc();populateSupvSelect();}
+  if(tab==='supv'){populateSupvSelect();renderSupv();}
+  if(tab==='export')populateLetterEmps();
+}
+function setPos(p,el){selectedPos=p;document.querySelectorAll('.pos-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');}
+function setSev(s,el){selectedSev=s;document.querySelectorAll('.sev-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');}
+function setStatus(s,el){selectedStatus=s;document.querySelectorAll('.stat-tog').forEach(function(b){b.classList.remove('active');});el.classList.add('active');}
+function handlePhotos(e){
+  Array.from(e.target.files).forEach(function(f){var r=new FileReader();r.onload=function(ev){pendingPhotos.push(ev.target.result);renderPhotoPreview();};r.readAsDataURL(f);});
+}
+function renderPhotoPreview(){
+  document.getElementById('photoPreview').innerHTML=pendingPhotos.map(function(p,i){return '<div class="rm-photo"><img src="'+p+'" onclick="openLightbox(\''+p+'\')"><button onclick="removePhoto('+i+')">x</button></div>';}).join('');
+}
+function removePhoto(i){pendingPhotos.splice(i,1);renderPhotoPreview();}
+function checkRepeat(){
+  var name=document.getElementById('empName').value.trim().toLowerCase();
+  var banner=document.getElementById('repeatBanner');
+  if(!name){banner.style.display='none';return;}
+  var count=records.filter(function(r){return r.name.toLowerCase()===name;}).length;
+  if(count>=2){banner.style.display='flex';banner.innerHTML='<span style="font-size:20px">&#128680;</span><strong>'+document.getElementById('empName').value.trim()+'</strong> already has '+count+' issue(s) — this will be their '+(count+1)+'th. Consider escalation.';}
+  else banner.style.display='none';
+}
+function submitRecord(){
+  var name=document.getElementById('empName').value.trim();
+  var date=document.getElementById('incDate').value;
+  var gh=document.getElementById('greenhouse').value;
+  var issue=document.getElementById('issueDesc').value.trim();
+  if(!name||!date||!gh||!issue||!selectedSev){toast('Fill all required fields and select severity','#e07b3a');return;}
+  records.unshift({id:Date.now(),name:name,empId:document.getElementById('empId').value.trim(),pos:selectedPos,supervisor:document.getElementById('supervisor').value.trim(),date:date,gh:gh,category:document.getElementById('category').value,severity:selectedSev,issue:issue,corrective:document.getElementById('corrective').value.trim(),status:selectedStatus,photos:pendingPhotos.slice(),recordedBy:document.getElementById('recordedBy').value.trim()});
+  save();updateHeaderStats();toast('Record saved');pendingPhotos=[];renderPhotoPreview();resetForm();
+}
+function resetForm(){
+  ['empName','empId','supervisor','issueDesc','corrective','recordedBy'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('greenhouse').value='';document.getElementById('category').value='';
+  document.getElementById('incDate').value=new Date().toISOString().split('T')[0];
+  selectedPos='GW';selectedSev='';selectedStatus='Open';
+  document.querySelectorAll('.pos-btn').forEach(function(b,i){b.classList.remove('active');if(i===0)b.classList.add('active');});
+  document.querySelectorAll('.sev-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.stat-tog').forEach(function(b,i){b.classList.remove('active');if(i===0)b.classList.add('active');});
+  document.getElementById('repeatBanner').style.display='none';
+}
+function renderRecords(){
+  var search=(document.getElementById('searchInput').value||'').toLowerCase();
+  var pos=document.getElementById('filterPos').value;
+  var gh=document.getElementById('filterGH').value;
+  var sev=document.getElementById('filterSev').value;
+  var status=document.getElementById('filterStatus').value;
+  var offenders=getOffenders();
+  var filtered=records.filter(function(r){
+    var match=[r.name,r.gh,r.issue,r.category,r.empId,r.supervisor].join(' ').toLowerCase();
+    return(!search||match.includes(search))&&(!pos||r.pos===pos)&&(!gh||r.gh===gh)&&(!sev||r.severity===sev)&&(!status||r.status===status);
+  });
+  document.getElementById('recordsCount').textContent='Showing '+filtered.length+' of '+records.length+' records';
+  var list=document.getElementById('recordsList');
+  if(!filtered.length){list.innerHTML='<div class="empty-state"><div>&#128194;</div>No records found</div>';return;}
+  list.innerHTML=filtered.map(function(r){
+    var isRepeat=offenders.has(r.name.toLowerCase());
+    var sc=r.severity.toLowerCase();
+    var stc=r.status==='In Progress'?'progress':r.status==='Resolved'?'resolved':'open';
+    var photos=r.photos&&r.photos.length?'<div class="rec-photos">'+r.photos.map(function(p){return '<img src="'+p+'" onclick="openLightbox(\''+p+'\')">';}).join('')+'</div>':'';
+    return '<div class="rec-card'+(isRepeat?' repeat':'')+'"><button class="rec-delete" onclick="deleteRec('+r.id+')">&#10005;</button><div class="rec-header"><div><div class="rec-name">'+r.name+(r.empId?' <span style="font-size:11px;color:var(--text-muted)">('+r.empId+')</span>':'')+(isRepeat?' <span class="badge repeat-flag">&#128260; Repeat</span>':'')+'</div><div class="rec-meta">&#128197; <span>'+fmt(r.date)+'</span> &nbsp;&#127968; <span>'+r.gh+'</span>'+(r.supervisor?' &nbsp;&#128100; <span>'+r.supervisor+'</span>':'')+(r.recordedBy?' &nbsp;&#9997; <span>'+r.recordedBy+'</span>':'')+'</div></div><div class="badges"><span class="badge '+(r.pos==='GW'?'gw':'atl')+'">'+(r.pos==='GW'?'GW':'Asst.TL')+'</span><span class="badge '+sc+'">'+r.severity+'</span><span class="badge '+stc+'">'+(r.status||'Open')+'</span></div></div><div class="rec-issue">'+r.issue+'</div><div class="rec-cat-row">'+(r.category?'<span class="cat-tag">&#127991;&#65039; '+r.category+'</span>':'')+'</div>'+(r.corrective?'<div class="rec-action"><span>Action:</span> '+r.corrective+'</div>':'')+photos+'<div class="status-inline"><span style="font-size:10px;color:var(--text-muted)">Status:</span><button class="si-btn open'+((!r.status||r.status==='Open')?' active':'')+'" onclick="changeStatus('+r.id+',\'Open\')">Open</button><button class="si-btn progress'+(r.status==='In Progress'?' active':'')+'" onclick="changeStatus('+r.id+',\'In Progress\')">In Progress</button><button class="si-btn resolved'+(r.status==='Resolved'?' active':'')+'" onclick="changeStatus('+r.id+',\'Resolved\')">Resolved</button><button class="si-btn" style="margin-left:auto" onclick="genLetterForRecord('+r.id+')">&#9993; Letter</button></div></div>';
+  }).join('');
+}
+function changeStatus(id,status){var r=records.find(function(x){return x.id===id;});if(r){r.status=status;save();updateHeaderStats();renderRecords();}}
+function deleteRec(id){if(!confirm('Delete this record?'))return;records=records.filter(function(r){return r.id!==id;});save();updateHeaderStats();renderRecords();}
+function renderSummary(){
+  document.getElementById('s-total').textContent=records.length;
+  document.getElementById('s-high').textContent=records.filter(function(r){return r.severity==='High'||r.severity==='Critical';}).length;
+  document.getElementById('s-open').textContent=records.filter(function(r){return !r.status||r.status==='Open';}).length;
+  var off=getOffenders();document.getElementById('s-repeat').textContent=off.size;
+  var repData={};
+  records.forEach(function(r){if(off.has(r.name.toLowerCase())){var k=r.name.toLowerCase();if(!repData[k])repData[k]={name:r.name,pos:r.pos,count:0,gh:r.gh};repData[k].count++;repData[k].gh=r.gh;}});
+  document.getElementById('repeatTbody').innerHTML=Object.values(repData).sort(function(a,b){return b.count-a.count;}).map(function(s){return '<tr><td class="name-cell">&#128680; '+s.name+'</td><td><span class="badge '+(s.pos==='GW'?'gw':'atl')+'">'+(s.pos==='GW'?'GW':'Asst.TL')+'</span></td><td class="count-cell" style="color:var(--danger)">'+s.count+'</td><td>'+s.gh+'</td></tr>';}).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No repeat offenders &#127881;</td></tr>';
+  var staff={};records.forEach(function(r){if(!staff[r.name])staff[r.name]={name:r.name,pos:r.pos,gh:r.gh,count:0};staff[r.name].count++;});
+  document.getElementById('staffTbody').innerHTML=Object.values(staff).sort(function(a,b){return b.count-a.count;}).map(function(s,i){return '<tr><td>'+(i+1)+'</td><td class="name-cell">'+s.name+'</td><td><span class="badge '+(s.pos==='GW'?'gw':'atl')+'">'+(s.pos==='GW'?'GW':'Asst.TL')+'</span></td><td>'+s.gh+'</td><td class="count-cell">'+s.count+'</td></tr>';}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">No data</td></tr>';
+  var ghs={};records.forEach(function(r){ghs[r.gh]=(ghs[r.gh]||0)+1;});
+  document.getElementById('ghTbody').innerHTML=Object.entries(ghs).sort(function(a,b){return b[1]-a[1];}).map(function(e){return '<tr><td class="name-cell">'+e[0]+'</td><td class="count-cell">'+e[1]+'</td></tr>';}).join('')||'<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px">No data</td></tr>';
+  var cats={};records.forEach(function(r){if(r.category)cats[r.category]=(cats[r.category]||0)+1;});
+  document.getElementById('catTbody').innerHTML=Object.entries(cats).sort(function(a,b){return b[1]-a[1];}).map(function(e){return '<tr><td class="name-cell">'+e[0]+'</td><td class="count-cell">'+e[1]+'</td></tr>';}).join('')||'<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px">No data</td></tr>';
+}
+var CDEFS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a9e80',font:{size:11}}},tooltip:{backgroundColor:'#1c2a1a',borderColor:'#2a3d28',borderWidth:1,titleColor:'#d4e8d0',bodyColor:'#7a9e80'}},scales:{x:{ticks:{color:'#4a6650',font:{size:10}},grid:{color:'rgba(42,61,40,0.5)'}},y:{ticks:{color:'#4a6650',font:{size:10}},grid:{color:'rgba(42,61,40,0.5)'},beginAtZero:true}}};
+var PDEFS={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a9e80',font:{size:11},padding:10}},tooltip:{backgroundColor:'#1c2a1a',borderColor:'#2a3d28',borderWidth:1,titleColor:'#d4e8d0',bodyColor:'#7a9e80'}}};
+function dc(c){if(c){try{c.destroy();}catch(e){}}}
+function getWeek(d){var s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
+function renderTrends(){
+  var period=document.getElementById('trendPeriod').value;
+  var group=document.getElementById('trendGroup').value;
+  var now=new Date(),labels=[],buckets=[],n=12;
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(var i=n-1;i>=0;i--){var d=new Date(now);if(period==='monthly'){d.setDate(1);d.setMonth(d.getMonth()-i);labels.push(MONTHS[d.getMonth()]+' '+d.getFullYear().toString().slice(2));}else{d.setDate(d.getDate()-i*7);labels.push('W'+getWeek(d));}buckets.push(new Date(d));}
+  function getBucket(ds){var d=new Date(ds);for(var i=0;i<buckets.length;i++){var b=buckets[i];if(period==='monthly'&&d.getMonth()===b.getMonth()&&d.getFullYear()===b.getFullYear())return i;if(period==='weekly'){var diff=(b-d)/(1000*60*60*24);if(diff>=0&&diff<7)return i;}}return -1;}
+  dc(trendC);var ctx=document.getElementById('trendChart').getContext('2d');
+  if(group==='all'){var data=new Array(n).fill(0);records.forEach(function(r){var b=getBucket(r.date);if(b>=0)data[b]++;});trendC=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Issues',data:data,borderColor:'#4caf72',backgroundColor:'rgba(76,175,114,0.1)',tension:.4,fill:true,pointBackgroundColor:'#4caf72'}]},options:CDEFS});}
+  else if(group==='severity'){var sevs=['Low','Medium','High','Critical'],colors=['#6fc87a','#e0b84a','#e07b3a','#e05252'];var datasets=sevs.map(function(s,si){var data=new Array(n).fill(0);records.filter(function(r){return r.severity===s;}).forEach(function(r){var b=getBucket(r.date);if(b>=0)data[b]++;});return{label:s,data:data,borderColor:colors[si],backgroundColor:colors[si]+'22',tension:.4,fill:false};});trendC=new Chart(ctx,{type:'line',data:{labels:labels,datasets:datasets},options:CDEFS});}
+  else{var cats=[...new Set(records.map(function(r){return r.category;}).filter(Boolean))].slice(0,5);var colors2=['#4caf72','#4a9fd4','#e0b84a','#e07b3a','#9b72cf'];var ds=cats.map(function(c,ci){var data=new Array(n).fill(0);records.filter(function(r){return r.category===c;}).forEach(function(r){var b=getBucket(r.date);if(b>=0)data[b]++;});return{label:c,data:data,backgroundColor:colors2[ci%5]+'99',borderColor:colors2[ci%5],borderWidth:1};});var stackOpts=JSON.parse(JSON.stringify(CDEFS));stackOpts.scales.x.stacked=true;stackOpts.scales.y.stacked=true;trendC=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:ds},options:stackOpts});}
+  dc(sevC);var sevCts={Low:0,Medium:0,High:0,Critical:0};records.forEach(function(r){if(sevCts[r.severity]!==undefined)sevCts[r.severity]++;});sevC=new Chart(document.getElementById('sevChart').getContext('2d'),{type:'doughnut',data:{labels:Object.keys(sevCts),datasets:[{data:Object.values(sevCts),backgroundColor:['#4a8a54','#a07a28','#a05020','#a03030'],borderColor:'#1c2a1a',borderWidth:2}]},options:PDEFS});
+  dc(ghC);var ghCts={};records.forEach(function(r){ghCts[r.gh]=(ghCts[r.gh]||0)+1;});var topGH=Object.entries(ghCts).sort(function(a,b){return b[1]-a[1];}).slice(0,8);ghC=new Chart(document.getElementById('ghChart').getContext('2d'),{type:'bar',data:{labels:topGH.map(function(x){return x[0];}),datasets:[{label:'Issues',data:topGH.map(function(x){return x[1];}),backgroundColor:'rgba(76,175,114,0.6)',borderColor:'#4caf72',borderWidth:1}]},options:Object.assign({},CDEFS,{plugins:Object.assign({},CDEFS.plugins,{legend:{display:false}})})});
+  dc(resC);var open=records.filter(function(r){return !r.status||r.status==='Open';}).length,prog=records.filter(function(r){return r.status==='In Progress';}).length,res=records.filter(function(r){return r.status==='Resolved';}).length;resC=new Chart(document.getElementById('resChart').getContext('2d'),{type:'bar',data:{labels:['Open','In Progress','Resolved'],datasets:[{data:[open,prog,res],backgroundColor:['#a0303088','#a0782888','#4a8a5488'],borderColor:['#e05252','#e0b84a','#6fc87a'],borderWidth:1.5}]},options:Object.assign({},CDEFS,{indexAxis:'y',plugins:Object.assign({},CDEFS.plugins,{legend:{display:false}})})});
+}
+function populateReportMonths(){
+  var sel=document.getElementById('reportMonth');
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var now=new Date();sel.innerHTML='<option value="">-- Select Month --</option>';
+  for(var i=0;i<12;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var val=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');var o=document.createElement('option');o.value=val;o.textContent=SHORT[d.getMonth()]+' '+d.getFullYear();sel.appendChild(o);}
+}
+function renderReport(){
+  var val=document.getElementById('reportMonth').value;
+  if(!val){document.getElementById('reportContent').innerHTML='<div class="empty-state"><div>&#128196;</div>Select a month to generate the report</div>';return;}
+  var parts=val.split('-');var yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  var MNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var monthRecs=records.filter(function(r){var d=new Date(r.date);return d.getFullYear()===yr&&d.getMonth()+1===mo;});
+  var total=monthRecs.length,highCrit=monthRecs.filter(function(r){return r.severity==='High'||r.severity==='Critical';}).length;
+  var resolved=monthRecs.filter(function(r){return r.status==='Resolved';}).length;
+  var resRate=total?Math.round(resolved/total*100):0;
+  var offenders=getOffenders();
+  var staff={};monthRecs.forEach(function(r){if(!staff[r.name])staff[r.name]={name:r.name,pos:r.pos,gh:r.gh,count:0,sevs:[]};staff[r.name].count++;staff[r.name].sevs.push(r.severity);});
+  var topStaff=Object.values(staff).sort(function(a,b){return b.count-a.count;});
+  var ghs={};monthRecs.forEach(function(r){ghs[r.gh]=(ghs[r.gh]||0)+1;});
+  var topGH=Object.entries(ghs).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+  var cats={};monthRecs.forEach(function(r){if(r.category)cats[r.category]=(cats[r.category]||0)+1;});
+  var html='<div class="report-header"><h2>&#127801; Maji Mazuri Flowers Limited</h2><p>Monthly Performance Report &mdash; '+MNAMES[mo-1]+' '+yr+' &nbsp;|&nbsp; Generated: '+fmt(new Date().toISOString().split('T')[0])+'</p></div>';
+  html+='<div class="report-stat-row"><div class="r-stat"><div class="rv">'+total+'</div><div class="rl">Total Issues</div></div><div class="r-stat"><div class="rv" style="color:var(--danger)">'+highCrit+'</div><div class="rl">High / Critical</div></div><div class="r-stat"><div class="rv" style="color:#6fc87a">'+resolved+'</div><div class="rl">Resolved</div></div><div class="r-stat"><div class="rv" style="color:var(--accent)">'+resRate+'%</div><div class="rl">Resolution Rate</div></div></div>';
+  if(total===0){html+='<div class="empty-state" style="padding:30px"><div>&#9989;</div>No issues recorded this month</div>';}
+  else{
+    html+='<div class="report-section"><h4>Issues by Staff Member</h4><div class="table-wrap"><table><thead><tr><th>#</th><th>Name</th><th>Position</th><th>GH</th><th>Issues</th><th>Severities</th><th>Flag</th></tr></thead><tbody>';
+    html+=topStaff.map(function(s,i){return '<tr><td>'+(i+1)+'</td><td class="name-cell">'+s.name+'</td><td><span class="badge '+(s.pos==='GW'?'gw':'atl')+'">'+(s.pos==='GW'?'GW':'Asst.TL')+'</span></td><td>'+s.gh+'</td><td class="count-cell">'+s.count+'</td><td>'+[...new Set(s.sevs)].join(', ')+'</td><td>'+(offenders.has(s.name.toLowerCase())?'<span class="badge repeat-flag">&#128260; Repeat</span>':'')+'</td></tr>';}).join('');
+    html+='</tbody></table></div></div>';
+    html+='<div class="report-section"><h4>Top Greenhouses</h4><div class="table-wrap"><table><thead><tr><th>Greenhouse</th><th>Issues</th></tr></thead><tbody>'+topGH.map(function(e){return '<tr><td class="name-cell">'+e[0]+'</td><td class="count-cell">'+e[1]+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+    html+='<div class="report-section"><h4>Issues by Category</h4><div class="table-wrap"><table><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody>'+Object.entries(cats).sort(function(a,b){return b[1]-a[1];}).map(function(e){return '<tr><td class="name-cell">'+e[0]+'</td><td class="count-cell">'+e[1]+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+    html+='<div class="report-section"><h4>Full Issue Log</h4><div class="table-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>GH</th><th>Category</th><th>Severity</th><th>Status</th><th>Issue</th></tr></thead><tbody>';
+    html+=monthRecs.map(function(r){var stc=r.status==='In Progress'?'progress':r.status==='Resolved'?'resolved':'open';return '<tr><td>'+fmt(r.date)+'</td><td class="name-cell">'+r.name+'</td><td>'+r.gh+'</td><td>'+(r.category||'--')+'</td><td><span class="badge '+r.severity.toLowerCase()+'">'+r.severity+'</span></td><td><span class="badge '+stc+'">'+(r.status||'Open')+'</span></td><td style="max-width:220px;font-size:11px">'+r.issue.substring(0,80)+(r.issue.length>80?'...':'')+'</td></tr>';}).join('');
+    html+='</tbody></table></div></div>';
+  }
+  document.getElementById('reportContent').innerHTML=html;
+}
+function exportReportCSV(){
+  var val=document.getElementById('reportMonth').value;
+  if(!val){toast('Select a month first','#e07b3a');return;}
+  var parts=val.split('-');var yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  var monthRecs=records.filter(function(r){var d=new Date(r.date);return d.getFullYear()===yr&&d.getMonth()+1===mo;});
+  if(!monthRecs.length){toast('No records for this month','#e07b3a');return;}
+  var headers='Date,Employee,ID,Position,Supervisor,GH,Category,Severity,Status,Issue,Corrective,Recorded By';
+  var rows=monthRecs.map(function(r){return [r.date,r.name,r.empId,r.pos==='GW'?'General Worker':'Asst.TL',r.supervisor,r.gh,r.category,r.severity,r.status||'Open','"'+(r.issue||'').replace(/"/g,'""')+'"','"'+(r.corrective||'').replace(/"/g,'""')+'"',r.recordedBy].join(',');});
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[headers,...rows].join('\n')],{type:'text/csv'}));a.download='MMFL_Report_'+val+'.csv';a.click();toast('Report CSV downloaded');
+}
+var DISC_STAGES=[{key:'none',label:'None',cls:''},{key:'verbal',label:'Verbal',cls:'verbal'},{key:'first',label:'1st Written',cls:'first'},{key:'second',label:'2nd Written',cls:'second'},{key:'final',label:'Final Warning',cls:'final'},{key:'term',label:'Termination',cls:'term'}];
+function renderDisc(){
+  var search=(document.getElementById('discSearch').value||'').toLowerCase();
+  var empNames=[...new Set(records.map(function(r){return r.name;}))].filter(function(n){return !search||n.toLowerCase().includes(search);});
+  var list=document.getElementById('discList');
+  if(!empNames.length){list.innerHTML='<div class="empty-state"><div>&#9878;&#65039;</div>No employees found</div>';return;}
+  list.innerHTML=empNames.map(function(name){
+    var key=name.toLowerCase().replace(/\s+/g,'_');
+    var emp=records.find(function(r){return r.name===name;});
+    var empCount=records.filter(function(r){return r.name===name;}).length;
+    var d=discData[key]||{stage:'none',date:'',notes:[]};
+    return '<div class="disc-card"><div class="disc-name">'+name+' <span style="font-size:11px;color:var(--text-muted)">('+empCount+' issue'+(empCount!==1?'s':'')+')</span><span class="badge '+(emp.pos==='GW'?'gw':'atl')+'" style="margin-left:auto">'+(emp.pos==='GW'?'GW':'Asst.TL')+'</span></div><div class="disc-pipeline">'+DISC_STAGES.map(function(s){return '<div class="disc-stage'+(d.stage===s.key?' active '+s.cls:'')+'" onclick="setDiscStage(\''+key+'\',\''+s.key+'\')" title="'+s.label+'">'+(s.key==='none'?'&mdash;':s.label)+'</div>';}).join('')+'</div><div class="disc-meta"><div>Stage: <span>'+( DISC_STAGES.find(function(s){return s.key===d.stage;})||{label:'None'}).label+'</span></div>'+(d.date?'<div>Updated: <span>'+fmt(d.date)+'</span></div>':'')+(d.notes&&d.notes.length?'<div>Last note: <span>'+d.notes[d.notes.length-1]+'</span></div>':'')+'</div><div class="disc-note-row"><input type="text" id="note_'+key+'" placeholder="Add a note..."><button onclick="addDiscNote(\''+key+'\')">Save</button></div></div>';
+  }).join('');
+}
+function setDiscStage(key,stage){if(!discData[key])discData[key]={stage:'none',date:'',notes:[]};discData[key].stage=stage;discData[key].date=new Date().toISOString().split('T')[0];saveDisc();renderDisc();var s=DISC_STAGES.find(function(x){return x.key===stage;});toast('Stage updated: '+(s?s.label:stage));}
+function addDiscNote(key){var inp=document.getElementById('note_'+key);var note=inp.value.trim();if(!note)return;if(!discData[key])discData[key]={stage:'none',date:'',notes:[]};discData[key].notes.push('['+new Date().toLocaleDateString()+'] '+note);saveDisc();inp.value='';renderDisc();toast('Note saved');}
+function populateSupvSelect(){
+  var sel=document.getElementById('supvSelect');var cur=sel.value;
+  var supvs=[...new Set(records.map(function(r){return r.supervisor;}).filter(Boolean))];
+  sel.innerHTML='<option value="">-- Select Supervisor / Team Leader --</option>'+supvs.map(function(s){return '<option'+(s===cur?' selected':'')+'>'+s+'</option>';}).join('');
+}
+function renderSupv(){
+  var sup=document.getElementById('supvSelect').value;
+  var cont=document.getElementById('supvContent');
+  if(!sup){cont.innerHTML='<div class="empty-state"><div>&#128100;</div>Select a supervisor to view their team dashboard</div>';return;}
+  var supRecs=records.filter(function(r){return r.supervisor===sup;});
+  var open=supRecs.filter(function(r){return !r.status||r.status==='Open';}).length;
+  var highCrit=supRecs.filter(function(r){return r.severity==='High'||r.severity==='Critical';}).length;
+  var offenders=getOffenders();
+  var members={};supRecs.forEach(function(r){if(!members[r.name])members[r.name]={name:r.name,pos:r.pos,gh:r.gh,count:0,open:0,high:0};members[r.name].count++;if(!r.status||r.status==='Open')members[r.name].open++;if(r.severity==='High'||r.severity==='Critical')members[r.name].high++;});
+  var html='<div class="form-card" style="margin-bottom:16px"><h2>&#128100; '+sup+"'s Team</h2><div class='sup-stats'><div class='sup-stat'><div class='sv'>"+supRecs.length+"</div><div class='sl'>Total Issues</div></div><div class='sup-stat'><div class='sv' style='color:var(--warn)'>"+open+"</div><div class='sl'>Open</div></div><div class='sup-stat'><div class='sv' style='color:var(--danger)'>"+highCrit+"</div><div class='sl'>High / Critical</div></div></div></div>";
+  html+='<div class="section-title">Team Members</div><div class="sup-team-grid">';
+  html+=Object.values(members).sort(function(a,b){return b.count-a.count;}).map(function(m){return '<div class="form-card" style="padding:14px;margin-bottom:0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:13px;font-weight:700;color:var(--text)">'+m.name+'</div><span class="badge '+(m.pos==='GW'?'gw':'atl')+'" style="margin-left:auto">'+(m.pos==='GW'?'GW':'Asst.TL')+'</span>'+(offenders.has(m.name.toLowerCase())?'<span class="badge repeat-flag">&#128260;</span>':'')+'</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">&#128205; '+m.gh+'</div><div style="display:flex;gap:8px"><div style="flex:1;background:var(--surface);border-radius:6px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--warn)">'+m.count+'</div><div style="font-size:10px;color:var(--text-muted)">Total</div></div><div style="flex:1;background:var(--surface);border-radius:6px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--danger)">'+m.open+'</div><div style="font-size:10px;color:var(--text-muted)">Open</div></div><div style="flex:1;background:var(--surface);border-radius:6px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:#f07070">'+m.high+'</div><div style="font-size:10px;color:var(--text-muted)">High/Crit</div></div></div></div>';}).join('');
+  html+='</div><div class="section-title" style="margin-top:20px">Recent Issues</div><div id="supvRecs">';
+  if(!supRecs.length)html+='<div class="empty-state" style="padding:30px"><div>&#9989;</div>No issues for this team</div>';
+  else html+=supRecs.slice(0,15).map(function(r){var sc=r.severity.toLowerCase();var stc=r.status==='In Progress'?'progress':r.status==='Resolved'?'resolved':'open';return '<div class="rec-card'+(offenders.has(r.name.toLowerCase())?' repeat':'')+'"><div class="rec-header"><div><div class="rec-name">'+r.name+(offenders.has(r.name.toLowerCase())?'<span class="badge repeat-flag" style="margin-left:6px">&#128260;</span>':'')+'</div><div class="rec-meta">&#128197; <span>'+fmt(r.date)+'</span> &nbsp; &#127968; <span>'+r.gh+'</span></div></div><div class="badges"><span class="badge '+sc+'">'+r.severity+'</span><span class="badge '+stc+'">'+(r.status||'Open')+'</span></div></div><div class="rec-issue">'+r.issue+'</div>'+(r.category?'<div class="rec-cat-row"><span class="cat-tag">'+r.category+'</span></div>':'')+'</div>';}).join('');
+  html+='</div>';
+  cont.innerHTML=html;
+}
+function exportCSV(){
+  if(!records.length){toast('No records to export','#e07b3a');return;}
+  var headers='Date,Employee Name,Employee ID,Position,Supervisor,GH,Category,Severity,Status,Issue,Corrective Action,Recorded By';
+  var rows=records.map(function(r){return [r.date,r.name,r.empId,r.pos==='GW'?'General Worker':'Asst. TL',r.supervisor,r.gh,r.category,r.severity,r.status||'Open','"'+(r.issue||'').replace(/"/g,'""')+'"','"'+(r.corrective||'').replace(/"/g,'""')+'"',r.recordedBy].join(',');});
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[headers,...rows].join('\n')],{type:'text/csv'}));a.download='MMFL_Performance_'+new Date().toISOString().split('T')[0]+'.csv';a.click();toast('CSV downloaded');
+}
+function populateLetterEmps(){var sel=document.getElementById('letterEmp');sel.innerHTML='<option value="">-- Choose Employee --</option>'+[...new Set(records.map(function(r){return r.name;}))].map(function(n){return '<option>'+n+'</option>';}).join('');}
+function populateLetterIssues(){var name=document.getElementById('letterEmp').value;var sel=document.getElementById('letterIssue');sel.innerHTML='<option value="">-- Choose Issue --</option>'+records.filter(function(r){return r.name===name;}).map(function(r){return '<option value="'+r.id+'">'+fmt(r.date)+' -- '+r.severity+' -- '+r.issue.substring(0,45)+'...</option>';}).join('');}
+function genLetterForRecord(id){showTab('export');populateLetterEmps();var r=records.find(function(x){return x.id===id;});if(!r)return;setTimeout(function(){document.getElementById('letterEmp').value=r.name;populateLetterIssues();setTimeout(function(){document.getElementById('letterIssue').value=r.id;},100);},200);}
+function generateLetter(){
+  var empName=document.getElementById('letterEmp').value;var issueId=parseInt(document.getElementById('letterIssue').value);var warnType=document.getElementById('warnType').value;var hrName=document.getElementById('hrName').value||'Management';
+  if(!empName||!issueId){toast('Select employee and issue','#e07b3a');return;}
+  var r=records.find(function(x){return x.id===issueId;});if(!r)return;
+  var today=fmt(new Date().toISOString().split('T')[0]);var pos=r.pos==='GW'?'General Worker':'Assistant Team Leader';
+  var letter='MAJI MAZURI FLOWERS LIMITED\nP.O. Box [Address], Kenya\n\nDate: '+today+'\nReference: MMFL/HR/'+r.id+'\n\nTO: '+empName+'\nPOSITION: '+pos+'\nGREENHOUSE: '+r.gh+'\n\nSUBJECT: '+warnType.toUpperCase()+'\n\nDear '+empName+',\n\nThis letter serves as a formal '+warnType+' regarding a performance/conduct issue that occurred on '+fmt(r.date)+' in '+r.gh+'.\n\nINCIDENT DETAILS:\nCategory: '+(r.category||'General')+'\nSeverity: '+r.severity+'\nDescription:\n'+r.issue+'\n\n'+(r.corrective?'CORRECTIVE ACTION TAKEN:\n'+r.corrective+'\n\n':'')+'This behaviour/performance is unacceptable and falls below the standards expected of all Maji Mazuri Flowers Limited employees. You are required to immediately improve and ensure such incidents do not recur.\n\nFailure to improve may result in further disciplinary action, up to and including termination of employment in accordance with the Employment Act of Kenya.\n\nYours faithfully,\n\n_______________________________\n'+hrName+'\nProduction Manager / HR Representative\nMaji Mazuri Flowers Limited\n\nDate: ___________________________\n\nEMPLOYEE ACKNOWLEDGEMENT:\nI, '+empName+', acknowledge receipt of this '+warnType+' dated '+today+'.\n\nSignature: _________________________ Date: _______________';
+  document.getElementById('letterContent').textContent=letter;document.getElementById('letterModal').style.display='flex';
+}
+function closeModal(){document.getElementById('letterModal').style.display='none';}
+function copyLetter(){navigator.clipboard.writeText(document.getElementById('letterContent').textContent);toast('Copied to clipboard');}
+function printLetter(){var w=window.open('','_blank');w.document.write('<html><head><title>Warning Letter</title><style>body{font-family:Georgia,serif;padding:40px;font-size:14px;line-height:1.8}pre{white-space:pre-wrap;font-family:Georgia,serif}</style></head><body><pre>'+document.getElementById('letterContent').textContent+'</pre></body></html>');w.document.close();w.print();}
+function openLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').style.display='flex';}
+function closeLightbox(){document.getElementById('lightbox').style.display='none';}
+function getOffenders(){var c={};records.forEach(function(r){var k=r.name.toLowerCase();c[k]=(c[k]||0)+1;});return new Set(Object.entries(c).filter(function(e){return e[1]>=3;}).map(function(e){return e[0];}));}
+function updateHeaderStats(){document.getElementById('totalCount').textContent=records.length;document.getElementById('repeatCount').textContent=getOffenders().size;document.getElementById('openCount').textContent=records.filter(function(r){return !r.status||r.status==='Open';}).length;}
+function fmt(d){if(!d)return'--';var p=d.split('-');var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return parseInt(p[2])+' '+M[parseInt(p[1])-1]+' '+p[0];}
+function save(){localStorage.setItem('mmfl_perf',JSON.stringify(records));}
+function saveDisc(){localStorage.setItem('mmfl_disc',JSON.stringify(discData));}
+function toast(msg,color){color=color||'var(--accent)';var el=document.getElementById('toast');el.textContent=msg;el.style.background=color;el.style.color=color==='var(--accent)'?'#0a1a0e':'#fff';el.classList.add('show');setTimeout(function(){el.classList.remove('show');},2800);}
+</script>
+</body>
+</html>
